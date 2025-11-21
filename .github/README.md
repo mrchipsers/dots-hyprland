@@ -1,5 +1,5 @@
 <div align="center">
-    <h1>【 end_4's Hyprland dotfiles 】</h1>
+    <h1>【 Mrchipsers' modified version of end_4's Hyprland dotfiles 】</h1>
     <h3></h3>
 </div>
 
@@ -29,9 +29,11 @@
   <summary>Installation (illogical-impulse Quickshell)</summary>
 
    - _If you're new to Linux and decide to use Hyprland, you're in for a tough ride._
-   - Just run `bash <(curl -s https://ii.clsty.link/get)`
-     - Or, clone this repo and run `./setup install`
-     - See [document](https://ii.clsty.link/en/ii-qs/01setup/) for details.
+   - to install:
+   - `cd .cache`
+   - `git clone https://github.com/mrchipsers/dots-hyprland`
+   - `cd dots-hyprland`
+   - `./setup install`
    - **Default keybinds**: Should be somewhat familiar to Windows or GNOME users. Important ones:
      - `Super`+`/` = keybind list
      - `Super`+`Enter` = terminal
@@ -49,6 +51,7 @@
   | ------------- | ------------- |
   | [Hyprland](https://github.com/hyprwm/hyprland) | The compositor (manages and renders windows) |
   | [Quickshell](https://quickshell.outfoxxed.me/) | A QtQuick-based widget system, used for the status bar, sidebars, etc. |
+  | [SDDM](https://github.com/sddm/sddm) | display manager |
 
   - For the full list of dependencies, see the [sdata/dist-arch folder](https://github.com/end-4/dots-hyprland/tree/main/sdata/dist-arch)
   - THERE IS NO WAYBAR STOP FUCKING CALLING EVERY BAR WAYBAR
