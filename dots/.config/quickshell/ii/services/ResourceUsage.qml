@@ -11,15 +11,16 @@ import Quickshell.Io
  */
 Singleton {
     id: root
-	property real memoryTotal: 1
-	property real memoryFree: 0
-	property real memoryUsed: memoryTotal - memoryFree
+    property real memoryTotal: 1
+    property real memoryFree: 0
+    property real memoryUsed: memoryTotal - memoryFree
     property real memoryUsedPercentage: memoryUsed / memoryTotal
     property real swapTotal: 1
-	property real swapFree: 0
-	property real swapUsed: swapTotal - swapFree
+    property real swapFree: 0
+    property real swapUsed: swapTotal - swapFree
     property real swapUsedPercentage: swapTotal > 0 ? (swapUsed / swapTotal) : 0
     property real cpuUsage: 0
+    property real cpu_temp: 0
     property var previousCpuStats
 
     property string maxAvailableMemoryString: kbToGbString(ResourceUsage.memoryTotal)
@@ -59,11 +60,11 @@ Singleton {
         updateCpuUsageHistory()
     }
 
-	Timer {
-		interval: 1
+    Timer {
+        interval: 1
         running: true 
         repeat: true
-		onTriggered: {
+        onTriggered: {
             // Reload files
             fileMeminfo.reload()
             fileStat.reload()
@@ -92,13 +93,41 @@ Singleton {
                 previousCpuStats = { total, idle }
             }
 
+                // Try reading common sysfs/hwmon temperature files first (faster,
+                // avoids spawning a shell). If those are empty, fall back to the
+                // probe process below.
+                var ttxt = ""
+                if (typeof fileTempThermal !== "undefined") {
+                    try { fileTempThermal.reload() } catch (e) {}
+                    ttxt = (fileTempThermal.text() || "").trim()
+                }
+                if ((!ttxt || ttxt.length === 0) && typeof fileTempHwmon !== "undefined") {
+                    try { fileTempHwmon.reload() } catch (e) {}
+                    ttxt = (fileTempHwmon.text() || "").trim()
+                }
+
+                if (ttxt && ttxt.length > 0) {
+                    var t = parseFloat(ttxt)
+                    if (!isNaN(t)) {
+                        if (t > 1000) t = t / 1000
+                        root.cpu_temp = t
+                    }
+                } else {
+                    if (typeof readCpuTempProc !== "undefined") {
+                        try { readCpuTempProc.start() } catch (e) {}
+                    }
+                }
+
             root.updateHistories()
             interval = Config.options?.resources?.updateInterval ?? 3000
         }
-	}
+    }
 
-	FileView { id: fileMeminfo; path: "/proc/meminfo" }
+    FileView { id: fileMeminfo; path: "/proc/meminfo" }
     FileView { id: fileStat; path: "/proc/stat" }
+    // Common locations for CPU temperature readings
+    FileView { id: fileTempThermal; path: "/sys/class/thermal/thermal_zone0/temp" }
+    FileView { id: fileTempHwmon; path: "/sys/class/hwmon/hwmon0/temp1_input" }
 
     Process {
         id: findCpuMaxFreqProc
@@ -111,4 +140,33 @@ Singleton {
             }
         }
     }
+
+    // Process to probe common sysfs/hwmon temperature files and output the first
+    // readable temperature. The Timer triggers `readCpuTempProc.start()` each
+    // update interval so we keep `cpu_temp` updated.
+    Process {
+        id: readCpuTempProc
+        running: false
+        command: ["bash", "-c",
+                  "for f in /sys/class/thermal/thermal_zone*/temp /sys/class/hwmon/hwmon*/temp*_input; do \
+                       if [ -f \"$f\" ]; then cat \"$f\" && exit 0; fi; \
+                   done; echo"]
+        stdout: StdioCollector {
+            id: outputTempCollector
+            onStreamFinished: {
+                var txt = outputTempCollector.text.trim()
+                if (txt.length > 0) {
+                    var t = parseFloat(txt)
+                    if (!isNaN(t)) {
+                        // If value looks like millidegrees, convert to degrees.
+                        if (t > 1000) t = t / 1000
+                        root.cpu_temp = t
+                    }
+                } else {
+                    root.cpu_temp = 0
+                }
+            }
+        }
+    }
+
 }

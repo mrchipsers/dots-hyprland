@@ -88,6 +88,11 @@ StyledPopup {
                     label: Translation.tr("Load:")
                     value: `${Math.round(ResourceUsage.cpuUsage * 100)}%`
                 }
+                StyledPopupValueRow {
+                    icon: "bolt"
+                    label: Translation.tr("Temp:")
+                    value: `${ResourceUsage.cpu_temp}°C`
+                }
             }
         }
     }
